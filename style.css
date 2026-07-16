@@ -1,0 +1,29 @@
+:root {
+  --ink: #22150e;
+  --gold: #f6bd4b;
+  --green: #2e6f47;
+  --sky: #78c4ff;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at 50% 20%, #f6e5c4, #21140d 72%); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; color: #fff7df; overflow: hidden; touch-action: none; }
+body { display: grid; place-items: center; }
+.phone-shell { position: relative; width: min(100vw, 568px); height: min(100vh, 320px); aspect-ratio: 568 / 320; overflow: hidden; background: #14100e; box-shadow: 0 18px 55px #000b, inset 0 0 0 2px #f4d58a66; }
+#game { display: block; width: 100%; height: 100%; image-rendering: crisp-edges; background: linear-gradient(#8bd4ff 0 48%, #edd39b 48% 100%); }
+.hud { position: absolute; z-index: 3; inset: 0 0 auto 0; height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: linear-gradient(#24150ee8, #24150e70, transparent); font-size: 12px; text-shadow: 0 2px 2px #000; pointer-events: none; }
+.hud strong { display: block; color: var(--gold); font-size: 15px; letter-spacing: .04em; }
+#stateLabel { opacity: .9; }
+.meters { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.meters span { padding: 2px 7px; border: 1px solid #fff4; border-radius: 999px; background: #0005; }
+.overlay { position: absolute; z-index: 5; inset: 0; display: grid; place-content: center; gap: 10px; padding: 28px; text-align: center; background: radial-gradient(circle, #3b2312cc, #000d); }
+.overlay.hidden { display: none; }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(34px, 9vw, 54px); color: var(--gold); text-shadow: 0 4px #5a2b0d, 0 0 20px #ffe28a; }
+h2 { font-size: 32px; color: var(--gold); }
+p { max-width: 440px; line-height: 1.6; font-weight: 700; }
+button { border: 0; border-radius: 999px; padding: 11px 22px; color: #25130b; background: linear-gradient(#ffe69c, #d88428); box-shadow: 0 5px 0 #71390e, 0 10px 18px #0008; font-weight: 900; font-size: 16px; cursor: pointer; }
+button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71390e, 0 5px 12px #0008; }
+.controls { position: absolute; z-index: 4; inset: auto 10px 10px 10px; display: flex; justify-content: space-between; pointer-events: none; }
+.controls button { pointer-events: auto; width: 64px; height: 64px; padding: 0; opacity: .86; font-size: 24px; border: 2px solid #fff8; }
+#attackButton { background: linear-gradient(#aaf0ff, #388bdc); color: #061b2c; }
+@media (orientation: portrait) { .phone-shell { transform: rotate(0deg); width: 100vw; height: 56.34vw; max-height: 100vh; } }
