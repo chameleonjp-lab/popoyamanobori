@@ -23,14 +23,32 @@
     <section id="titleScreen" class="overlay">
       <h1>ぽぽ山のぼり</h1>
       <p>たぬき修験者「ぽぽ」を操作して、鬼・烏天狗・雪女たちをかわしながら霊山を登ろう。</p>
+      <label for="playerName">ランキング表示名</label>
+      <input id="playerName" class="name-field" type="text" maxlength="20" autocomplete="nickname" placeholder="名前を入力してください">
+      <p id="nameNote" class="screen-note" role="status" aria-live="polite"></p>
       <button id="startButton">開始</button>
+      <button id="homeShareButton" type="button">ゲームをシェア</button>
+      <p id="homeShareStatus" class="screen-note" role="status" aria-live="polite"></p>
+      <a class="screen-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/" target="_blank" rel="noopener noreferrer">カメレオンJPの実験場へ</a>
       <small>ジャンプ: タップ / ↑ / Space　攻撃: 長押し / Z</small>
     </section>
 
     <section id="gameOver" class="overlay hidden">
       <h2 id="resultTitle">修行終了</h2>
       <p id="resultText"></p>
-      <button id="retryButton">もう一度</button>
+      <p id="resultPlayer" class="screen-note"></p>
+      <textarea id="resultShareText" class="result-share-text" readonly aria-label="結果のシェア文"></textarea>
+      <div class="result-actions">
+        <button id="retryButton">もう一度</button>
+        <button id="resultShareButton" type="button">結果をシェア（文面をコピー）</button>
+      </div>
+      <p id="resultShareStatus" class="screen-note" role="status" aria-live="polite"></p>
+      <section class="ranking" aria-labelledby="rankingTitle">
+        <h3 id="rankingTitle">護符ランキング TOP10</h3>
+        <ol id="rankingList"><li>ランキングを読み込み中…</li></ol>
+        <p id="rankingStatus" class="ranking-status" role="status" aria-live="polite"></p>
+      </section>
+      <a class="screen-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/" target="_blank" rel="noopener noreferrer">カメレオンJPの実験場へ</a>
     </section>
 
     <nav class="controls" aria-label="スマホ操作ボタン">
