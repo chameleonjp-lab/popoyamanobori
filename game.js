@@ -8,12 +8,103 @@ const ui = {
   hp: document.getElementById('hp'), score: document.getElementById('score'), distance: document.getElementById('distance'),
   label: document.getElementById('stateLabel'), title: document.getElementById('titleScreen'), over: document.getElementById('gameOver'),
   resultTitle: document.getElementById('resultTitle'), resultText: document.getElementById('resultText'),
+  playerName: document.getElementById('playerName'), nameNote: document.getElementById('nameNote'),
+  homeShare: document.getElementById('homeShareButton'), homeShareStatus: document.getElementById('homeShareStatus'),
+  resultPlayer: document.getElementById('resultPlayer'), resultShareText: document.getElementById('resultShareText'),
+  resultShare: document.getElementById('resultShareButton'), resultShareStatus: document.getElementById('resultShareStatus'),
+  rankingList: document.getElementById('rankingList'), rankingStatus: document.getElementById('rankingStatus'),
 };
 
 const keys = new Set();
 let game;
+const GAME_SLUG = 'popoyamanobori';
+const SUPABASE_URL = 'https://mlpnjgezrnhdxsxolyzj.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_drzcy0v97knU6FgjqSgBHw_0A9XPdFM';
+const CLIENT_VERSION = 'popoyamanobori-2026-08-31-platform';
+const NAME_STORAGE_KEY = 'popoyamanobori.player-name';
+let playerName = localStorage.getItem(NAME_STORAGE_KEY) || '';
+ui.playerName.value = playerName;
+
+function cleanName(value) {
+  return value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 20);
+}
+
+function requireName() {
+  playerName = cleanName(ui.playerName.value);
+  ui.playerName.value = playerName;
+  if (!playerName) {
+    ui.nameNote.textContent = '名前を入力してから開始してください。';
+    ui.playerName.focus();
+    return false;
+  }
+  localStorage.setItem(NAME_STORAGE_KEY, playerName);
+  ui.nameNote.textContent = '';
+  return true;
+}
+
+function gameUrl() { return new URL(location.href).toString().split('#')[0]; }
+function homeShareText() { return `ぽぽ山のぼりで妖怪の山道を駆け抜けよう！\n${gameUrl()}\n#ぽぽ山のぼり #ミニゲーム`; }
+function resultShareText() { return `${playerName}さんのぽぽ山のぼり：護符${game.score}点、距離${Math.floor(game.distance)}m！\n${game.distance >= 1000 ? '登頂成功！' : '妖怪をかわして修行中。'}\n${gameUrl()}\n#ぽぽ山のぼり #ミニゲーム`; }
+
+async function shareOrCopy(text, statusElement) {
+  statusElement.textContent = '';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'ぽぽ山のぼり', text, url: gameUrl() });
+      statusElement.textContent = '共有しました。';
+      return;
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    statusElement.textContent = 'シェア文をコピーしました。';
+  } catch (_) {
+    const field = statusElement === ui.resultShareStatus ? ui.resultShareText : null;
+    if (field) { field.focus(); field.select(); }
+    statusElement.textContent = field ? 'シェア文を選択しました。コピーしてご利用ください。' : '共有機能を利用できませんでした。';
+  }
+}
+
+async function callRankingRpc(functionName, payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
+  if (!response.ok) throw new Error(`${functionName}: ${response.status}`);
+  return data;
+}
+
+function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
+function renderRanking(rows) {
+  const list = Array.isArray(rows) ? rows.slice(0, 10) : [];
+  ui.rankingList.innerHTML = list.length
+    ? list.map((row) => `<li>${escapeHtml(row.display_name || row.player_name || 'ななし')}：${Number(row.score ?? row.best_score ?? 0)}点</li>`).join('')
+    : '<li>まだランキングがありません。</li>';
+}
+async function submitAndLoadRanking() {
+  ui.rankingStatus.textContent = 'ランキングを更新中…';
+  try {
+    await callRankingRpc('submit_score', { p_display_name: playerName, p_game_slug: GAME_SLUG, p_score: Math.trunc(game.score), p_client_version: CLIENT_VERSION });
+  } catch (_) {
+    ui.rankingStatus.textContent = '今回のスコアを送信できませんでした。ランキングを表示します。';
+  }
+  try {
+    renderRanking(await callRankingRpc('get_best_score_ranking', { p_game_slug: GAME_SLUG, p_limit: 10 }));
+    if (ui.rankingStatus.textContent === 'ランキングを更新中…') ui.rankingStatus.textContent = '上位10名を表示しています。';
+  } catch (_) {
+    renderRanking([]);
+    ui.rankingStatus.textContent = 'ランキングを読み込めませんでした。';
+  }
+}
 
 function resetGame() {
+  if (!requireName()) return;
   game = {
     running: true, time: 0, speed: 2.6, distance: 0, score: 0, spawn: 70, shrine: 0,
     player: { x: 78, y: groundY - 66, w: 48, h: 66, vy: 0, hp: 3, inv: 0, attack: 0, grounded: true },
@@ -70,7 +161,19 @@ function handleCollisions() {
   for (const c of game.charms) if (!c.got && hit(p, { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 })) { c.got = true; game.score += 10; burst(c.x, c.y, '#ffd45b', 9); }
   if (game.distance >= 1000) endGame(true);
 }
-function endGame(clear) { game.running = false; ui.resultTitle.textContent = clear ? '登頂成功！' : '修行終了'; ui.resultText.textContent = `護符 ${game.score} / 距離 ${Math.floor(game.distance)}m。${clear ? 'ぽぽは霊山の頂にたどり着いた！' : 'もう一度、妖怪の山道へ挑もう。'}`; ui.over.classList.remove('hidden'); }
+function endGame(clear) {
+  if (!game?.running) return;
+  game.running = false;
+  ui.resultTitle.textContent = clear ? '登頂成功！' : '修行終了';
+  ui.resultText.textContent = `護符 ${game.score} / 距離 ${Math.floor(game.distance)}m。${clear ? 'ぽぽは霊山の頂にたどり着いた！' : 'もう一度、妖怪の山道へ挑もう。'}`;
+  ui.resultPlayer.textContent = `${playerName}さんの結果`;
+  ui.resultShareText.value = resultShareText();
+  ui.rankingList.innerHTML = '<li>ランキングを読み込み中…</li>';
+  ui.rankingStatus.textContent = '';
+  ui.resultShareStatus.textContent = '';
+  ui.over.classList.remove('hidden');
+  void submitAndLoadRanking();
+}
 function burst(x, y, color, n) { for (let i = 0; i < n; i++) game.particles.push({ x, y, vx: (Math.random() - .5) * 4, vy: (Math.random() - .7) * 3, life: 22 + Math.random() * 15, color }); }
 
 function drawTanuki(p) {
@@ -104,6 +207,9 @@ function tri(x1,y1,x2,y2,x3,y3){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(
 
 document.getElementById('startButton').addEventListener('click', resetGame);
 document.getElementById('retryButton').addEventListener('click', resetGame);
+ui.playerName.addEventListener('input', () => { ui.nameNote.textContent = ''; });
+ui.homeShare.addEventListener('click', () => shareOrCopy(homeShareText(), ui.homeShareStatus));
+ui.resultShare.addEventListener('click', () => shareOrCopy(resultShareText(), ui.resultShareStatus));
 document.getElementById('jumpButton').addEventListener('pointerdown', jump);
 document.getElementById('attackButton').addEventListener('pointerdown', attack);
 let pressTimer = 0;
